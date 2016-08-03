@@ -93,7 +93,7 @@ class graphite::config inherits graphite::params {
   $carbon_conf_file = "${::graphite::carbon_conf_dir_REAL}/carbon.conf"
   $graphite_web_managepy_location = $::graphite::gr_pip_install ? {
     false   => $::graphite::graphiteweb_conf_dir_REAL,
-    default => $::graphite::graphiteweb_install_lib_dir_REAL,
+    default => $::graphite::graphiteweb_webapp_dir_REAL,
   }
 
   # first init of user db for graphite
@@ -119,6 +119,16 @@ class graphite::config inherits graphite::params {
     mode      => '0755',
     owner     => $gr_web_user_REAL,
     subscribe => Exec['Initial django db creation'],
+  }
+
+  file { [
+    "${::graphite::graphiteweb_log_dir_REAL}/info.log",
+    "${::graphite::graphiteweb_log_dir_REAL}/exception.log"]:
+    ensure    => file,
+    group     => $gr_web_group_REAL,
+    mode      => '0644',
+    owner     => $gr_web_user_REAL,
+    require   => File[$::graphite::graphiteweb_log_dir_REAL],
   }
 
   # change access permissions for carbon-cache to align with gr_user

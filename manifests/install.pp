@@ -66,6 +66,11 @@ class graphite::install inherits graphite::params {
       name   => $::graphite::gr_graphite_pkg,
     }
     ,
+    'pyparsing'   => {
+      ensure => '2.1.5',
+      name   => 'pyparsing',
+    }
+    ,
     'twisted'        => {
       ensure => $::graphite::gr_twisted_ver,
       name   => $::graphite::gr_twisted_pkg,
@@ -91,6 +96,27 @@ class graphite::install inherits graphite::params {
     require  => $gr_pkg_require,
   }
   )
+
+  file { '/opt/graphite/src':
+    ensure  => directory,
+    require => Package['graphite-web', 'pyparsing'],
+  }
+
+  # Temporary hack to overwrite the pip installed graphite-web with prerelease version .10 from github
+  # We should pull this out and revert back to using the upstream puppet-graphite once .10 is released
+  vcsrepo { 'graphite-web':
+    ensure   => present,
+    provider => 'git',
+    path     => '/opt/graphite/src/graphite-web',
+    source   => 'https://github.com/graphite-project/graphite-web.git',
+    revision => '92bd68a9384eaac43b775744e54ceb6b972ae589',
+    require  => File['/opt/graphite/src'],
+  }
+  exec { 'replace-webapp-dir':
+    command => '/bin/cp -a /opt/graphite/src/graphite-web/webapp/* /opt/graphite/webapp/ && /usr/bin/touch /opt/graphite/webapp/.replace-webapp-dir-do-not-delete',
+    creates => '/opt/graphite/webapp/.replace-webapp-dir-do-not-delete',
+    require => Vcsrepo['graphite-web'],
+  }
 
   if $::graphite::gr_django_pkg {
     package { $::graphite::gr_django_pkg:
